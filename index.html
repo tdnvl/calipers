@@ -455,7 +455,7 @@
 
     <div class="toggle">
       <button id="btn-mm" class="active">mm</button>
-      <button id="btn-in">inch thousandths</button>
+      <button id="btn-in">inch</button>
     </div>
 
     <div class="field">
@@ -650,6 +650,8 @@
   navConvert.addEventListener('click', showConvert);
 
   /* ---------- Taper calculator ---------- */
+  const MM_PER_INCH = 25.4;
+
   const major = document.getElementById('major');
   const minor = document.getElementById('minor');
   const length = document.getElementById('length');
@@ -665,6 +667,16 @@
   let dialogDismissed = false;
 
   function setUnit(u) {
+    if (u === unit) return;
+
+    const factor = u === 'in' ? (1 / MM_PER_INCH) : MM_PER_INCH;
+    [major, minor, length].forEach((input) => {
+      const v = parseFloat(input.value);
+      if (!isNaN(v)) {
+        input.value = (v * factor).toFixed(3);
+      }
+    });
+
     unit = u;
     if (u === 'mm') {
       btnMm.classList.add('active');
@@ -780,8 +792,6 @@
   const suggestValueEl = document.getElementById('suggest-value');
   const suggestNoteEl = document.getElementById('suggest-note');
   const warnBannerEl = document.getElementById('warn-banner');
-
-  const MM_PER_INCH = 25.4;
 
   // Suggested-dial safety tiers: the closer you get to target, the smaller
   // the recommended pass, so the finishing cuts happen in small, checkable steps.
