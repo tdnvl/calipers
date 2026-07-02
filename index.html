@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Taper &amp; Pass Calculator</title>
+
+<!-- iOS "Add to Home Screen" support -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calipers">
+<meta name="theme-color" content="#0a0a0a">
 <style>
   :root {
     --ink: #ffffff;
@@ -268,6 +276,110 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Calibration / cut log */
+  .log-section {
+    margin-top: 32px;
+    border-top: 2px solid var(--line);
+    padding-top: 24px;
+  }
+  .log-section h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: #ffffff;
+  }
+  .suggest-box {
+    margin: 18px 0 24px;
+    padding: 18px;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    background: rgba(255,184,77,0.06);
+    text-align: center;
+  }
+  .suggest-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .suggest-value {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .suggest-value .unit { font-size: 1.1rem; }
+  .suggest-note {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--dim);
+    line-height: 1.4;
+  }
+  .warn-banner {
+    display: none;
+    margin: 0 0 20px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 2px solid #ff5c5c;
+    background: rgba(255,92,92,0.08);
+    color: #ff8a8a;
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .warn-banner.show { display: block; }
+  .dial-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .dial-row .field { flex: 1; margin-bottom: 0; }
+  .log-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 16px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 12px;
+    border: none;
+    background: var(--accent);
+    color: #0a0a0a;
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+  .log-list { margin-top: 20px; }
+  .log-entry {
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line);
+    font-size: 0.88rem;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry-top {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 3px;
+  }
+  .log-entry-top .flag { color: #ff8a8a; }
+  .log-entry-sub { color: var(--dim); }
+  .clear-log {
+    display: block;
+    margin: 16px auto 0;
+    padding: 10px 16px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 2px solid var(--line);
+    background: none;
+    color: var(--dim);
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+
   /* Overlay dialog (taper flip) */
   .overlay {
     display: none;
@@ -405,6 +517,46 @@
     </div>
 
     <p class="note">Fill only one box per diameter, mm or inch. If both are filled, the mm value wins.</p>
+
+    <div class="log-section" id="log-section">
+      <h2>Dial-in &amp; calibration</h2>
+      <p class="sub" style="margin-bottom: 16px;">Log what you dial and what you actually cut. The suggested next dial adjusts for how your lathe has been cutting.</p>
+
+      <div class="suggest-box" id="suggest-box">
+        <div class="suggest-label">Suggested next dial</div>
+        <div class="suggest-value" id="suggest-value">—</div>
+        <div class="suggest-note" id="suggest-note">Enter target and current diameter above to get a suggestion.</div>
+      </div>
+
+      <div class="warn-banner" id="warn-banner"></div>
+
+      <div class="dial-row">
+        <div class="field">
+          <label for="dial-thou">Dialed <span class="unit-hint">thou</span></label>
+          <input type="text" id="dial-thou" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.0" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top: 16px;">
+        <label>Resulting diameter</label>
+        <div class="pair">
+          <div class="pair-box">
+            <label for="result-mm">mm</label>
+            <input type="text" id="result-mm" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.000" autocomplete="off">
+          </div>
+          <div class="pair-box">
+            <label for="result-in">in <span class="unit-hint">.000</span></label>
+            <input type="text" id="result-in" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.000" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <button class="log-btn" id="log-cut-btn">Log Cut</button>
+
+      <div class="log-list" id="log-list"></div>
+
+      <button class="clear-log" id="clear-log-btn">Clear log</button>
+    </div>
   </section>
 
   <!-- ===================== CONVERTER VIEW ===================== -->
@@ -619,22 +771,60 @@
   const currentInInput = document.getElementById('current-in');
   const passResults = document.getElementById('pass-results');
 
+  const dialThouInput = document.getElementById('dial-thou');
+  const resultMmInput = document.getElementById('result-mm');
+  const resultInInput = document.getElementById('result-in');
+  const logCutBtn = document.getElementById('log-cut-btn');
+  const clearLogBtn = document.getElementById('clear-log-btn');
+  const logListEl = document.getElementById('log-list');
+  const suggestValueEl = document.getElementById('suggest-value');
+  const suggestNoteEl = document.getElementById('suggest-note');
+  const warnBannerEl = document.getElementById('warn-banner');
+
   const MM_PER_INCH = 25.4;
 
-  function linkPair(mmInput, inInput) {
+  // Suggested-dial safety tiers: the closer you get to target, the smaller
+  // the recommended pass, so the finishing cuts happen in small, checkable steps.
+  const TIER_ROUGH = 15;   // remaining > 30 thou
+  const TIER_MEDIUM = 10;  // 10 < remaining <= 30 thou
+  const TIER_FINE = 5;     // remaining <= 10 thou
+
+  function suggestionCap(remainingThou) {
+    if (remainingThou > 30) return TIER_ROUGH;
+    if (remainingThou > 10) return TIER_MEDIUM;
+    return TIER_FINE;
+  }
+
+  let cutLog = [];
+  let suppressReset = false;
+
+  function linkPair(mmInput, inInput, onChange) {
     mmInput.addEventListener('input', () => {
       sanitizeDecimal(mmInput);
       if (mmInput.value !== '') inInput.value = '';
-      calculatePass();
+      if (onChange) onChange();
     });
     inInput.addEventListener('input', () => {
       sanitizeDecimal(inInput);
       if (inInput.value !== '') mmInput.value = '';
-      calculatePass();
+      if (onChange) onChange();
     });
   }
-  linkPair(targetMmInput, targetInInput);
-  linkPair(currentMmInput, currentInInput);
+
+  function onTargetOrCurrentChange() {
+    if (!suppressReset) {
+      cutLog = [];
+      renderLog();
+      hideWarning();
+    }
+    calculatePass();
+  }
+
+  linkPair(targetMmInput, targetInInput, onTargetOrCurrentChange);
+  linkPair(currentMmInput, currentInInput, onTargetOrCurrentChange);
+  linkPair(resultMmInput, resultInInput, null);
+
+  dialThouInput.addEventListener('input', () => sanitizeDecimal(dialThouInput));
 
   function diameterToMm(mmInput, inInput) {
     const mmVal = parseFloat(mmInput.value);
@@ -650,6 +840,7 @@
 
     if (isNaN(targetMm) || isNaN(currentMm)) {
       passResults.innerHTML = '<div class="placeholder">Enter target and current diameter to see the pass</div>';
+      renderSuggestion(NaN);
       return;
     }
 
@@ -667,7 +858,139 @@
       <div class="pass-main">${absThou.toFixed(1)}<span class="pass-main-unit"> thou</span></div>
       <div class="pass-sub">${absMm.toFixed(3)} mm</div>
     `;
+
+    renderSuggestion(diffThou);
   }
+
+  function averageEfficiency() {
+    const valid = cutLog.filter(c => c.dialed > 0);
+    if (valid.length === 0) return 1;
+    const sum = valid.reduce((acc, c) => acc + (c.actual / c.dialed), 0);
+    return sum / valid.length;
+  }
+
+  function renderSuggestion(remainingThouSigned) {
+    if (isNaN(remainingThouSigned)) {
+      suggestValueEl.textContent = '—';
+      suggestNoteEl.textContent = 'Enter target and current diameter above to get a suggestion.';
+      return;
+    }
+
+    const remaining = Math.abs(remainingThouSigned);
+
+    if (remaining < 0.15) {
+      suggestValueEl.innerHTML = '0.0<span class="unit"> thou</span>';
+      suggestNoteEl.textContent = 'On target. No further cut needed.';
+      return;
+    }
+
+    if (remainingThouSigned < 0) {
+      suggestValueEl.textContent = '—';
+      suggestNoteEl.textContent = 'Current diameter is undersized. A dial-in pass will not fix this.';
+      return;
+    }
+
+    const efficiency = averageEfficiency();
+    const rawSuggestion = efficiency > 0 ? remaining / efficiency : remaining;
+    const cap = suggestionCap(remaining);
+    const suggestion = Math.min(rawSuggestion, cap);
+    const capped = rawSuggestion > cap;
+
+    suggestValueEl.innerHTML = `${suggestion.toFixed(1)}<span class="unit"> thou</span>`;
+
+    let note = '';
+    if (cutLog.length === 0) {
+      note = `No cuts logged yet, capped at ${cap} thou for safety.`;
+    } else {
+      const pct = (efficiency * 100).toFixed(0);
+      note = `Based on ${cutLog.length} logged cut${cutLog.length > 1 ? 's' : ''}, your lathe is cutting at ~${pct}% of what's dialed.`;
+      if (capped) note += ` Capped at ${cap} thou for this stage, more passes needed.`;
+    }
+    suggestNoteEl.textContent = note;
+  }
+
+  function showWarning(dialed, actual) {
+    warnBannerEl.textContent = `Last cut removed more than dialed: dialed ${dialed.toFixed(1)} thou, actual ${actual.toFixed(1)} thou. Risk of cutting past target, reduce your next pass.`;
+    warnBannerEl.classList.add('show');
+  }
+  function hideWarning() {
+    warnBannerEl.classList.remove('show');
+  }
+
+  function renderLog() {
+    if (cutLog.length === 0) {
+      logListEl.innerHTML = '';
+      return;
+    }
+    logListEl.innerHTML = cutLog
+      .slice()
+      .reverse()
+      .map((c) => {
+        const flag = c.warn ? '<span class="flag"> ⚠ overcut</span>' : '';
+        return `
+          <div class="log-entry">
+            <div class="log-entry-top">
+              <span>#${c.n} — dialed ${c.dialed.toFixed(1)} thou${flag}</span>
+              <span>${c.actual.toFixed(1)} thou actual</span>
+            </div>
+            <div class="log-entry-sub">Resulting diameter: ${c.resultMm.toFixed(3)} mm · Remaining after: ${c.remainingAfter.toFixed(1)} thou</div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  logCutBtn.addEventListener('click', () => {
+    const targetMm = diameterToMm(targetMmInput, targetInInput);
+    const prevCurrentMm = diameterToMm(currentMmInput, currentInInput);
+    const dialed = parseFloat(dialThouInput.value);
+    const resultMm = diameterToMm(resultMmInput, resultInInput);
+
+    if (isNaN(targetMm) || isNaN(prevCurrentMm) || isNaN(dialed) || isNaN(resultMm)) {
+      return;
+    }
+
+    const actualRemovedMm = prevCurrentMm - resultMm;
+    const actualThou = (actualRemovedMm / MM_PER_INCH) * 1000;
+    const warn = actualThou > dialed + 0.05;
+
+    const remainingAfterMm = resultMm - targetMm;
+    const remainingAfterThou = (remainingAfterMm / MM_PER_INCH) * 1000;
+
+    cutLog.push({
+      n: cutLog.length + 1,
+      dialed: dialed,
+      actual: actualThou,
+      resultMm: resultMm,
+      remainingAfter: remainingAfterThou,
+      warn: warn
+    });
+
+    suppressReset = true;
+    currentMmInput.value = resultMm.toFixed(3);
+    currentInInput.value = '';
+    suppressReset = false;
+
+    dialThouInput.value = '';
+    resultMmInput.value = '';
+    resultInInput.value = '';
+
+    if (warn) {
+      showWarning(dialed, actualThou);
+    } else {
+      hideWarning();
+    }
+
+    renderLog();
+    calculatePass();
+  });
+
+  clearLogBtn.addEventListener('click', () => {
+    cutLog = [];
+    renderLog();
+    hideWarning();
+    calculatePass();
+  });
 
   /* ---------- Converter ---------- */
   const convMm = document.getElementById('conv-mm');
