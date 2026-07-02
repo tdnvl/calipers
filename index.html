@@ -933,8 +933,6 @@
       return;
     }
     logListEl.innerHTML = cutLog
-      .slice()
-      .reverse()
       .map((c) => {
         const flag = c.warn ? '<span class="flag"> ⚠ overcut</span>' : '';
         return `
