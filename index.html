@@ -87,8 +87,16 @@
     border-left: 2px solid var(--accent);
     z-index: 30;
     padding: 24px 0;
+    flex-direction: column;
   }
-  .menu.show { display: block; }
+  .menu.show { display: flex; }
+  .menu-version {
+    margin-top: auto;
+    padding: 18px 24px;
+    font-size: 0.78rem;
+    color: var(--dimmer);
+    border-top: 1px solid var(--line);
+  }
   .menu-overlay {
     display: none;
     position: fixed;
@@ -209,6 +217,91 @@
   .copy-btn.copied {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  .input-with-fraction {
+    display: flex;
+    gap: 10px;
+  }
+  .fraction-btn {
+    flex: 0 0 auto;
+    width: 68px;
+    padding: 0 6px;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    background: var(--paper);
+    color: var(--accent);
+    font-family: inherit;
+    -webkit-appearance: none;
+    white-space: nowrap;
+  }
+  .input-with-fraction input[type="text"] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fraction-field-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--dim);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .fraction-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .fraction-num-input {
+    width: 90px;
+    font-size: 1.6rem;
+    padding: 14px 10px;
+    text-align: center;
+    border-radius: 12px;
+    border: 2px solid var(--line);
+    background: var(--card);
+    color: #ffffff;
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+  .fraction-num-input:focus { outline: none; border-color: var(--accent); }
+  .fraction-slash {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--dim);
+  }
+  .denominator-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .denominator-btn {
+    flex: 1;
+    padding: 12px 4px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 10px;
+    border: 2px solid var(--line);
+    background: var(--paper);
+    color: var(--dim);
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+  .denominator-btn.active {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #0a0a0a;
+  }
+  .fraction-preview {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 20px;
+    min-height: 1.4em;
   }
 
   .results {
@@ -447,6 +540,7 @@
   <button class="menu-item" id="nav-taper">Taper Calculator</button>
   <button class="menu-item active" id="nav-pass">Pass Calculator</button>
   <button class="menu-item" id="nav-convert">mm ⇄ in Converter</button>
+  <div class="menu-version">v2.1</div>
 </nav>
 
 <div class="wrap">
@@ -583,13 +677,42 @@
 
     <div class="field">
       <label for="conv-in">Inches <span class="unit-hint">.000</span></label>
-      <input type="text" id="conv-in" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.000" autocomplete="off">
+      <div class="input-with-fraction">
+        <input type="text" id="conv-in" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.000" autocomplete="off">
+        <button class="fraction-btn" id="fraction-btn" type="button">x/y</button>
+      </div>
       <button class="copy-btn" id="copy-in">Copy inch value</button>
     </div>
 
     <p class="note">1 inch = 25.4 mm.</p>
   </section>
 
+</div>
+
+<!-- Fraction entry modal -->
+<div class="overlay" id="fraction-overlay">
+  <div class="dialog">
+    <p>Enter an inch fraction</p>
+    <span class="fraction-field-label">Numerator</span>
+    <div class="fraction-row">
+      <input type="text" class="fraction-num-input" id="fraction-numerator" inputmode="numeric" pattern="[0-9]*" placeholder="7" autocomplete="off">
+      <span class="fraction-slash">/</span>
+      <span id="fraction-denominator-display" style="font-size:1.6rem; font-weight:700; color:#ffffff;">16</span>
+    </div>
+    <span class="fraction-field-label">Denominator</span>
+    <div class="denominator-group" id="denominator-group">
+      <button class="denominator-btn" data-denominator="2">2</button>
+      <button class="denominator-btn" data-denominator="4">4</button>
+      <button class="denominator-btn" data-denominator="8">8</button>
+      <button class="denominator-btn active" data-denominator="16">16</button>
+      <button class="denominator-btn" data-denominator="32">32</button>
+    </div>
+    <div class="fraction-preview" id="fraction-preview">= 0.000 in</div>
+    <div class="dialog-buttons">
+      <button class="no" id="fraction-cancel">Cancel</button>
+      <button class="yes" id="fraction-submit">Use Value</button>
+    </div>
+  </div>
 </div>
 
 <!-- Taper flip confirmation dialog -->
@@ -1083,6 +1206,76 @@
 
   copyMmBtn.addEventListener('click', () => copyValue(convMm, copyMmBtn));
   copyInBtn.addEventListener('click', () => copyValue(convIn, copyInBtn));
+
+  /* ---------- Fraction picker (for the inch field) ---------- */
+  const fractionBtn = document.getElementById('fraction-btn');
+  const fractionOverlay = document.getElementById('fraction-overlay');
+  const fractionNumerator = document.getElementById('fraction-numerator');
+  const denominatorGroup = document.getElementById('denominator-group');
+  const denominatorDisplay = document.getElementById('fraction-denominator-display');
+  const fractionPreview = document.getElementById('fraction-preview');
+  const fractionCancelBtn = document.getElementById('fraction-cancel');
+  const fractionSubmitBtn = document.getElementById('fraction-submit');
+
+  let fractionDenominator = 16;
+
+  function openFractionModal() {
+    fractionNumerator.value = '';
+    fractionDenominator = 16;
+    denominatorGroup.querySelectorAll('.denominator-btn').forEach((btn) => {
+      btn.classList.toggle('active', parseInt(btn.dataset.denominator, 10) === fractionDenominator);
+    });
+    denominatorDisplay.textContent = fractionDenominator;
+    updateFractionPreview();
+    fractionOverlay.classList.add('show');
+    fractionNumerator.focus();
+  }
+
+  function closeFractionModal() {
+    fractionOverlay.classList.remove('show');
+  }
+
+  function updateFractionPreview() {
+    const num = parseFloat(fractionNumerator.value);
+    if (isNaN(num)) {
+      fractionPreview.textContent = '= 0.000 in';
+      return;
+    }
+    const decimal = num / fractionDenominator;
+    fractionPreview.textContent = `= ${decimal.toFixed(4)} in`;
+  }
+
+  fractionBtn.addEventListener('click', openFractionModal);
+  fractionCancelBtn.addEventListener('click', closeFractionModal);
+
+  fractionNumerator.addEventListener('input', () => {
+    let v = fractionNumerator.value.replace(/[^0-9]/g, '');
+    fractionNumerator.value = v;
+    updateFractionPreview();
+  });
+
+  denominatorGroup.querySelectorAll('.denominator-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      fractionDenominator = parseInt(btn.dataset.denominator, 10);
+      denominatorGroup.querySelectorAll('.denominator-btn').forEach((b) => {
+        b.classList.toggle('active', b === btn);
+      });
+      denominatorDisplay.textContent = fractionDenominator;
+      updateFractionPreview();
+    });
+  });
+
+  fractionSubmitBtn.addEventListener('click', () => {
+    const num = parseFloat(fractionNumerator.value);
+    if (isNaN(num)) {
+      closeFractionModal();
+      return;
+    }
+    const decimal = num / fractionDenominator;
+    convIn.value = decimal.toFixed(4);
+    convIn.dispatchEvent(new Event('input', { bubbles: true }));
+    closeFractionModal();
+  });
 </script>
 </body>
 </html>
