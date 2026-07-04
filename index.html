@@ -523,6 +523,10 @@
     -webkit-appearance: none;
   }
   .dialog-buttons .yes { background: var(--accent); color: #0a0a0a; }
+  .dialog-buttons button:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+  }
   .dialog-buttons .no { background: var(--paper); color: var(--accent); }
 </style>
 </head>
@@ -540,7 +544,7 @@
   <button class="menu-item" id="nav-taper">Taper Calculator</button>
   <button class="menu-item active" id="nav-pass">Pass Calculator</button>
   <button class="menu-item" id="nav-convert">mm ⇄ in Converter</button>
-  <div class="menu-version">v2.1</div>
+  <div class="menu-version">v2.2</div>
 </nav>
 
 <div class="wrap">
@@ -1238,11 +1242,13 @@
   function updateFractionPreview() {
     const num = parseFloat(fractionNumerator.value);
     if (isNaN(num)) {
-      fractionPreview.textContent = '= 0.000 in';
+      fractionPreview.textContent = 'Enter a numerator';
+      fractionSubmitBtn.disabled = true;
       return;
     }
     const decimal = num / fractionDenominator;
     fractionPreview.textContent = `= ${decimal.toFixed(4)} in`;
+    fractionSubmitBtn.disabled = false;
   }
 
   fractionBtn.addEventListener('click', openFractionModal);
@@ -1268,7 +1274,6 @@
   fractionSubmitBtn.addEventListener('click', () => {
     const num = parseFloat(fractionNumerator.value);
     if (isNaN(num)) {
-      closeFractionModal();
       return;
     }
     const decimal = num / fractionDenominator;
