@@ -1,10 +1,6 @@
-# Taper & Pass Calculator
+# Calipers
 
 A small, mobile-optimized web app with three tools: a taper calculator, a pass calculator, and a mm/inch converter.
-
-## Live app
-
-https://tdnvl.github.io/taper-calculator/
 
 ## Taper Calculator
 
