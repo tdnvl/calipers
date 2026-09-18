@@ -377,6 +377,41 @@
     padding: 24px 0;
   }
 
+  /* Ferrule decoration */
+  .outline-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 12px;
+    border: 2px solid var(--line);
+    background: none;
+    color: var(--dim);
+    font-family: inherit;
+    -webkit-appearance: none;
+  }
+  .action-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .fd-canvas-wrap {
+    margin: 24px 0;
+    text-align: center;
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+  #fd-canvas {
+    max-width: 100%;
+    height: auto;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    display: block;
+    margin: 0 auto;
+  }
+
   .results {
     margin-top: 32px;
     border-top: 2px solid var(--line);
@@ -618,7 +653,8 @@
   <button class="menu-item active" id="nav-pass">Pass Calculator</button>
   <button class="menu-item" id="nav-convert">mm ⇄ in Converter</button>
   <button class="menu-item" id="nav-thread">Thread Cutting</button>
-  <div class="menu-version">v3</div>
+  <button class="menu-item" id="nav-ferrule">Ferrule Decoration</button>
+  <div class="menu-version">v4</div>
 </nav>
 
 <div class="wrap">
@@ -776,6 +812,54 @@
     <p class="note">Right-hand tumbler position counts 1–8, left to right, matching the chart's columns.</p>
   </section>
 
+  <!-- ===================== FERRULE DECORATION VIEW ===================== -->
+  <section class="view" id="view-ferrule">
+    <p class="sub">Draw a ferrule profile from length and diameters, add decoration lines and coves, then export.</p>
+
+    <div class="field">
+      <label for="fd-length">Length <span class="unit-hint">mm</span></label>
+      <input type="text" id="fd-length" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.00" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="fd-large-diameter">Large diameter <span class="unit-hint">mm</span></label>
+      <input type="text" id="fd-large-diameter" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.00" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="fd-small-diameter">Small diameter <span class="unit-hint">mm</span></label>
+      <input type="text" id="fd-small-diameter" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" placeholder="0.00" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="fd-x-values">Decoration lines <span class="unit-hint">comma-separated, e.g. 10, 20, 30</span></label>
+      <input type="text" id="fd-x-values" autocomplete="off" placeholder="10, 20, 30">
+    </div>
+
+    <div class="field">
+      <label for="fd-cove-values">Coves <span class="unit-hint">comma-separated pairs, e.g. 15-25, 30-40</span></label>
+      <input type="text" id="fd-cove-values" autocomplete="off" placeholder="15-25, 30-40">
+    </div>
+
+    <div class="toggle">
+      <button id="fd-dim-show" class="active">Show dimensions</button>
+      <button id="fd-dim-hide">Hide dimensions</button>
+    </div>
+
+    <button class="log-btn" id="fd-draw-btn">Draw Shape</button>
+
+    <div class="fd-canvas-wrap">
+      <canvas id="fd-canvas" width="500" height="500"></canvas>
+    </div>
+
+    <div class="action-row">
+      <button class="outline-btn" id="fd-export-png">Export to PNG</button>
+      <button class="outline-btn" id="fd-export-settings">Export Settings</button>
+      <button class="outline-btn" id="fd-import-settings-btn">Import Settings</button>
+      <input type="file" id="fd-import-settings-input" accept="application/json" style="display:none;">
+    </div>
+  </section>
+
 </div>
 
 <!-- Fraction entry modal -->
@@ -826,7 +910,8 @@
     { nav: document.getElementById('nav-taper'), view: document.getElementById('view-taper'), title: 'Taper Calculator' },
     { nav: document.getElementById('nav-pass'), view: document.getElementById('view-pass'), title: 'Pass Calculator' },
     { nav: document.getElementById('nav-convert'), view: document.getElementById('view-convert'), title: 'mm ⇄ in Converter' },
-    { nav: document.getElementById('nav-thread'), view: document.getElementById('view-thread'), title: 'Thread Cutting' }
+    { nav: document.getElementById('nav-thread'), view: document.getElementById('view-thread'), title: 'Thread Cutting' },
+    { nav: document.getElementById('nav-ferrule'), view: document.getElementById('view-ferrule'), title: 'Ferrule Decoration' }
   ];
 
   function openMenu() {
@@ -1465,6 +1550,184 @@
   });
 
   renderThreadList('');
+
+  /* ---------- Ferrule Decoration ---------- */
+  const fdLengthInput = document.getElementById('fd-length');
+  const fdLargeDiameterInput = document.getElementById('fd-large-diameter');
+  const fdSmallDiameterInput = document.getElementById('fd-small-diameter');
+  const fdXValuesInput = document.getElementById('fd-x-values');
+  const fdCoveValuesInput = document.getElementById('fd-cove-values');
+  const fdDimShowBtn = document.getElementById('fd-dim-show');
+  const fdDimHideBtn = document.getElementById('fd-dim-hide');
+  const fdDrawBtn = document.getElementById('fd-draw-btn');
+  const fdCanvas = document.getElementById('fd-canvas');
+  const fdExportPngBtn = document.getElementById('fd-export-png');
+  const fdExportSettingsBtn = document.getElementById('fd-export-settings');
+  const fdImportSettingsBtn = document.getElementById('fd-import-settings-btn');
+  const fdImportSettingsInput = document.getElementById('fd-import-settings-input');
+
+  let fdHideDimensions = false;
+
+  fdDimShowBtn.addEventListener('click', () => {
+    fdHideDimensions = false;
+    fdDimShowBtn.classList.add('active');
+    fdDimHideBtn.classList.remove('active');
+    fdDrawShape();
+  });
+  fdDimHideBtn.addEventListener('click', () => {
+    fdHideDimensions = true;
+    fdDimHideBtn.classList.add('active');
+    fdDimShowBtn.classList.remove('active');
+    fdDrawShape();
+  });
+
+  [fdLengthInput, fdLargeDiameterInput, fdSmallDiameterInput].forEach((input) => {
+    input.addEventListener('input', () => sanitizeDecimal(input));
+  });
+
+  function fdDrawShape() {
+    const length = parseFloat(fdLengthInput.value);
+    const largeDiameter = parseFloat(fdLargeDiameterInput.value);
+    const smallDiameter = parseFloat(fdSmallDiameterInput.value);
+    if (isNaN(length) || isNaN(largeDiameter) || isNaN(smallDiameter) || length <= 0) {
+      return;
+    }
+
+    const xValues = fdXValuesInput.value
+      ? fdXValuesInput.value.split(',').map(Number)
+      : [];
+    const coveValues = fdCoveValuesInput.value
+      ? fdCoveValuesInput.value.split(',').map((pair) => pair.split('-').map(Number))
+      : [];
+
+    const scaleFactor = 10;
+
+    fdCanvas.width = length * scaleFactor + 100;
+    fdCanvas.height = Math.max(largeDiameter, smallDiameter) * scaleFactor + 100;
+    const ctx = fdCanvas.getContext('2d');
+
+    ctx.clearRect(0, 0, fdCanvas.width, fdCanvas.height);
+
+    const x0 = fdCanvas.width / 2 - (length * scaleFactor) / 2;
+    const x1 = fdCanvas.width / 2 + (length * scaleFactor) / 2;
+    const y0 = fdCanvas.height / 2;
+    const topLarge = y0 - (largeDiameter * scaleFactor) / 2;
+    const bottomLarge = y0 + (largeDiameter * scaleFactor) / 2;
+    const topSmall = y0 - (smallDiameter * scaleFactor) / 2;
+    const bottomSmall = y0 + (smallDiameter * scaleFactor) / 2;
+
+    ctx.strokeStyle = '#ffb84d';
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x0, topLarge);
+    ctx.lineTo(x0, bottomLarge);
+    ctx.lineTo(x1, bottomSmall);
+    ctx.lineTo(x1, topSmall);
+    ctx.closePath();
+    ctx.stroke();
+
+    if (!fdHideDimensions) {
+      ctx.font = '13px -apple-system, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+
+      ctx.fillText(`${largeDiameter} mm`, x0, topLarge - 10);
+      ctx.fillText(`${smallDiameter} mm`, x1, topSmall - 10);
+      ctx.fillText(`${length} mm`, (x0 + x1) / 2, bottomLarge + 22);
+    }
+
+    ctx.strokeStyle = '#ffb84d';
+    xValues.forEach((x) => {
+      const scaledX = x0 + x * scaleFactor;
+      if (scaledX >= x0 && scaledX <= x1) {
+        const yTop = topLarge + ((topSmall - topLarge) * (scaledX - x0)) / (x1 - x0);
+        const yBottom = bottomLarge + ((bottomSmall - bottomLarge) * (scaledX - x0)) / (x1 - x0);
+        ctx.beginPath();
+        ctx.moveTo(scaledX, yTop);
+        ctx.lineTo(scaledX, yBottom);
+        ctx.stroke();
+      }
+    });
+
+    coveValues.forEach(([shadeStart, shadeEnd]) => {
+      if (!isNaN(shadeStart) && !isNaN(shadeEnd)) {
+        const scaledShadeStart = x0 + shadeStart * scaleFactor;
+        const scaledShadeEnd = x0 + shadeEnd * scaleFactor;
+        if (scaledShadeStart >= x0 && scaledShadeEnd <= x1 && scaledShadeStart < scaledShadeEnd) {
+          const yTopStart = topLarge + ((topSmall - topLarge) * (scaledShadeStart - x0)) / (x1 - x0);
+          const yBottomStart = bottomLarge + ((bottomSmall - bottomLarge) * (scaledShadeStart - x0)) / (x1 - x0);
+          const yTopEnd = topLarge + ((topSmall - topLarge) * (scaledShadeEnd - x0)) / (x1 - x0);
+          const yBottomEnd = bottomLarge + ((bottomSmall - bottomLarge) * (scaledShadeEnd - x0)) / (x1 - x0);
+
+          ctx.fillStyle = 'rgba(255, 184, 77, 0.3)';
+          ctx.beginPath();
+          ctx.moveTo(scaledShadeStart, yTopStart);
+          ctx.lineTo(scaledShadeEnd, yTopEnd);
+          ctx.lineTo(scaledShadeEnd, yBottomEnd);
+          ctx.lineTo(scaledShadeStart, yBottomStart);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    });
+  }
+
+  fdDrawBtn.addEventListener('click', fdDrawShape);
+
+  fdExportSettingsBtn.addEventListener('click', () => {
+    const settings = {
+      length: fdLengthInput.value,
+      largeDiameter: fdLargeDiameterInput.value,
+      smallDiameter: fdSmallDiameterInput.value,
+      xValues: fdXValuesInput.value,
+      coveValues: fdCoveValuesInput.value,
+      hideDimensions: fdHideDimensions
+    };
+    const settingsJSON = JSON.stringify(settings, null, 2);
+    const blob = new Blob([settingsJSON], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ferrule-settings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  fdImportSettingsBtn.addEventListener('click', () => {
+    fdImportSettingsInput.click();
+  });
+
+  fdImportSettingsInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const settings = JSON.parse(e.target.result);
+      fdLengthInput.value = settings.length || '';
+      fdLargeDiameterInput.value = settings.largeDiameter || '';
+      fdSmallDiameterInput.value = settings.smallDiameter || '';
+      fdXValuesInput.value = settings.xValues || '';
+      fdCoveValuesInput.value = settings.coveValues || '';
+      fdHideDimensions = !!settings.hideDimensions;
+      if (fdHideDimensions) {
+        fdDimHideBtn.classList.add('active');
+        fdDimShowBtn.classList.remove('active');
+      } else {
+        fdDimShowBtn.classList.add('active');
+        fdDimHideBtn.classList.remove('active');
+      }
+      fdDrawShape();
+    };
+    reader.readAsText(file);
+  });
+
+  fdExportPngBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.href = fdCanvas.toDataURL('image/png');
+    link.download = 'ferrule-shape.png';
+    link.click();
+  });
 
 </script>
 </body>
