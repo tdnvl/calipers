@@ -396,6 +396,38 @@
     gap: 10px;
     margin-top: 20px;
   }
+  .fd-zoom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .fd-zoom-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    border-radius: 12px;
+    border: 2px solid var(--line);
+    background: var(--card);
+    color: #ffffff;
+    -webkit-appearance: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fd-zoom-btn:active {
+    border-color: var(--accent);
+  }
+  .fd-zoom-label {
+    font-size: 0.85rem;
+    color: var(--dim);
+    min-width: 50px;
+    text-align: center;
+  }
+
   .fd-canvas-wrap {
     margin: 24px 0;
     text-align: center;
@@ -650,8 +682,8 @@
 <div class="menu-overlay" id="menu-overlay"></div>
 <nav class="menu" id="menu">
   <button class="menu-item" id="nav-taper">Taper Calculator</button>
-  <button class="menu-item active" id="nav-pass">Pass Calculator</button>
-  <button class="menu-item" id="nav-convert">mm ⇄ in Converter</button>
+  <button class="menu-item" id="nav-pass">Pass Calculator</button>
+  <button class="menu-item active" id="nav-convert">mm ⇄ in Converter</button>
   <button class="menu-item" id="nav-thread">Thread Cutting</button>
   <button class="menu-item" id="nav-ferrule">Ferrule Decoration</button>
   <div class="menu-version">v4</div>
@@ -701,7 +733,7 @@
   </section>
 
   <!-- ===================== PASS VIEW ===================== -->
-  <section class="view active" id="view-pass">
+  <section class="view" id="view-pass">
     <p class="sub">Enter target and current diameter, each in mm or inch. The difference is your pass, shown in thousandths of an inch.</p>
 
     <div class="field">
@@ -780,7 +812,7 @@
   </section>
 
   <!-- ===================== CONVERTER VIEW ===================== -->
-  <section class="view" id="view-convert">
+  <section class="view active" id="view-convert">
     <p class="sub">Type in either field. It converts in real time. Use the copy buttons to grab a value for another calculator.</p>
 
     <div class="field">
@@ -847,6 +879,12 @@
     </div>
 
     <button class="log-btn" id="fd-draw-btn">Draw Shape</button>
+
+    <div class="fd-zoom-bar">
+      <button class="fd-zoom-btn" id="fd-zoom-minus">−</button>
+      <div class="fd-zoom-label"><span id="fd-zoom-display">100</span>%</div>
+      <button class="fd-zoom-btn" id="fd-zoom-plus">+</button>
+    </div>
 
     <div class="fd-canvas-wrap">
       <canvas id="fd-canvas" width="500" height="500"></canvas>
@@ -1565,8 +1603,12 @@
   const fdExportSettingsBtn = document.getElementById('fd-export-settings');
   const fdImportSettingsBtn = document.getElementById('fd-import-settings-btn');
   const fdImportSettingsInput = document.getElementById('fd-import-settings-input');
+  const fdZoomMinusBtn = document.getElementById('fd-zoom-minus');
+  const fdZoomPlusBtn = document.getElementById('fd-zoom-plus');
+  const fdZoomDisplay = document.getElementById('fd-zoom-display');
 
   let fdHideDimensions = false;
+  let fdZoomLevel = 1.5;
 
   fdDimShowBtn.addEventListener('click', () => {
     fdHideDimensions = false;
@@ -1578,6 +1620,18 @@
     fdHideDimensions = true;
     fdDimHideBtn.classList.add('active');
     fdDimShowBtn.classList.remove('active');
+    fdDrawShape();
+  });
+
+  fdZoomMinusBtn.addEventListener('click', () => {
+    fdZoomLevel = Math.max(0.5, fdZoomLevel - 0.25);
+    fdZoomDisplay.textContent = Math.round(fdZoomLevel * 100);
+    fdDrawShape();
+  });
+
+  fdZoomPlusBtn.addEventListener('click', () => {
+    fdZoomLevel = Math.min(3, fdZoomLevel + 0.25);
+    fdZoomDisplay.textContent = Math.round(fdZoomLevel * 100);
     fdDrawShape();
   });
 
@@ -1600,10 +1654,11 @@
       ? fdCoveValuesInput.value.split(',').map((pair) => pair.split('-').map(Number))
       : [];
 
-    const scaleFactor = 10;
+    const scaleFactor = 10 * fdZoomLevel;
+    const padding = 140;
 
-    fdCanvas.width = length * scaleFactor + 100;
-    fdCanvas.height = Math.max(largeDiameter, smallDiameter) * scaleFactor + 100;
+    fdCanvas.width = length * scaleFactor + padding * 2;
+    fdCanvas.height = Math.max(largeDiameter, smallDiameter) * scaleFactor + padding * 2;
     const ctx = fdCanvas.getContext('2d');
 
     ctx.clearRect(0, 0, fdCanvas.width, fdCanvas.height);
@@ -1628,13 +1683,51 @@
     ctx.stroke();
 
     if (!fdHideDimensions) {
-      ctx.font = '13px -apple-system, sans-serif';
+      const baseFontSize = 13;
+      const decorFontSize = 11;
+      ctx.font = `${Math.round(baseFontSize * fdZoomLevel)}px -apple-system, sans-serif`;
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
 
-      ctx.fillText(`${largeDiameter} mm`, x0, topLarge - 10);
-      ctx.fillText(`${smallDiameter} mm`, x1, topSmall - 10);
-      ctx.fillText(`${length} mm`, (x0 + x1) / 2, bottomLarge + 22);
+      ctx.fillText(`${largeDiameter} mm`, x0, topLarge - 12 * fdZoomLevel);
+      ctx.fillText(`${smallDiameter} mm`, x1, topSmall - 12 * fdZoomLevel);
+      ctx.fillText(`${length} mm`, (x0 + x1) / 2, bottomLarge + 26 * fdZoomLevel);
+
+      // Decoration lines labels
+      ctx.font = `${Math.round(decorFontSize * fdZoomLevel)}px -apple-system, sans-serif`;
+      ctx.fillStyle = '#ffb84d';
+      xValues.forEach((x, index) => {
+        const scaledX = x0 + x * scaleFactor;
+        if (scaledX >= x0 && scaledX <= x1) {
+          const xInThousandths = (x / length) * 1000;
+          const lineSpacing = 20 * fdZoomLevel;
+          const topOffset = 35 * fdZoomLevel + index * lineSpacing;
+          const bottomOffset = 50 * fdZoomLevel + index * lineSpacing;
+          ctx.textAlign = 'center';
+          ctx.fillText(`${x}mm`, scaledX, topLarge - topOffset);
+          ctx.fillText(`${xInThousandths.toFixed(0)}`, scaledX, bottomLarge + bottomOffset);
+        }
+      });
+
+      // Cove labels
+      ctx.fillStyle = '#ffb84d';
+      coveValues.forEach(([shadeStart, shadeEnd], index) => {
+        if (!isNaN(shadeStart) && !isNaN(shadeEnd)) {
+          const scaledShadeStart = x0 + shadeStart * scaleFactor;
+          const scaledShadeEnd = x0 + shadeEnd * scaleFactor;
+          if (scaledShadeStart >= x0 && scaledShadeEnd <= x1 && scaledShadeStart < scaledShadeEnd) {
+            const coveX = (scaledShadeStart + scaledShadeEnd) / 2;
+            const coveStartThousandths = (shadeStart / length) * 1000;
+            const coveEndThousandths = (shadeEnd / length) * 1000;
+            const lineSpacing = 20 * fdZoomLevel;
+            const topOffset = 52 * fdZoomLevel + index * lineSpacing;
+            const bottomOffset = 70 * fdZoomLevel + index * lineSpacing;
+            ctx.textAlign = 'center';
+            ctx.fillText(`${shadeStart}–${shadeEnd}mm`, coveX, topLarge - topOffset);
+            ctx.fillText(`${coveStartThousandths.toFixed(0)}–${coveEndThousandths.toFixed(0)}`, coveX, bottomLarge + bottomOffset);
+          }
+        }
+      });
     }
 
     ctx.strokeStyle = '#ffb84d';
@@ -1682,7 +1775,8 @@
       smallDiameter: fdSmallDiameterInput.value,
       xValues: fdXValuesInput.value,
       coveValues: fdCoveValuesInput.value,
-      hideDimensions: fdHideDimensions
+      hideDimensions: fdHideDimensions,
+      zoomLevel: fdZoomLevel
     };
     const settingsJSON = JSON.stringify(settings, null, 2);
     const blob = new Blob([settingsJSON], { type: 'application/json' });
@@ -1710,6 +1804,10 @@
       fdXValuesInput.value = settings.xValues || '';
       fdCoveValuesInput.value = settings.coveValues || '';
       fdHideDimensions = !!settings.hideDimensions;
+      if (settings.zoomLevel) {
+        fdZoomLevel = settings.zoomLevel;
+        fdZoomDisplay.textContent = Math.round(fdZoomLevel * 100);
+      }
       if (fdHideDimensions) {
         fdDimHideBtn.classList.add('active');
         fdDimShowBtn.classList.remove('active');
