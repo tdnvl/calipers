@@ -275,11 +275,12 @@
   }
   .denominator-group {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 20px;
   }
   .denominator-btn {
-    flex: 1;
+    flex: 0 1 calc(33.333% - 6px);
     padding: 12px 4px;
     font-size: 0.95rem;
     font-weight: 700;
@@ -917,6 +918,7 @@
       <button class="denominator-btn" data-denominator="8">8</button>
       <button class="denominator-btn active" data-denominator="16">16</button>
       <button class="denominator-btn" data-denominator="32">32</button>
+      <button class="denominator-btn" data-denominator="64">64</button>
     </div>
     <div class="fraction-preview" id="fraction-preview">= 0.000 in</div>
     <div class="dialog-buttons">
